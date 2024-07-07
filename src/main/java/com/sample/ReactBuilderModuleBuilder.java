@@ -8,7 +8,6 @@ import com.intellij.openapi.module.ModuleType;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.util.io.FileUtil;
-import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -17,22 +16,41 @@ import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Vector;
 
 public class ReactBuilderModuleBuilder extends ModuleBuilder {
     private String packageName;
     private String domainClassName;
+    private Vector<Vector> tableData;
 
     @Override
     public void setupRootModel(@NotNull ModifiableRootModel modifiableRootModel) throws ConfigurationException {
         String path = modifiableRootModel.getProject().getBasePath();
         if (path != null) {
-            String srcPath = path + "/src";
+            String srcPath = path + "/src/main/java/" + packageName.replace('.', '/');
             try {
                 FileUtil.ensureExists(new File(srcPath));
                 addSourceRoot(modifiableRootModel, new File(srcPath));
+                createJavaClass(srcPath, domainClassName, tableData);
             } catch (IOException e) {
                 throw new ConfigurationException("Could not create source directory", "Error");
             }
+        }
+    }
+
+    private void createJavaClass(String path, String className, Vector<Vector> data) throws IOException {
+        File file = new File(path, className + ".java");
+        try (PrintWriter out = new PrintWriter(file)) {
+            out.println("package " + packageName + ";");
+            out.println();
+            out.println("public class " + className + " {");
+            for (Vector<Object> row : data) {
+                String attributeName = (String) row.get(0);
+                String dataType = (String) row.get(1);
+                out.println("    private " + dataType + " " + attributeName + ";");
+            }
+            out.println("}");
         }
     }
 
@@ -113,7 +131,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 // Update the data model with the values from the text fields
                 packageName = packageNameField.getText();
                 domainClassName = domainClassNameField.getText();
-                // TODO: Update the data model with the values from the table
+                tableData = tableModel.getDataVector();
             }
         };
     }
