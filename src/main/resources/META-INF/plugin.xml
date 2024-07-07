@@ -1,0 +1,12 @@
+<idea-plugin >
+    <id>com.sample</id>
+    <name>React Module Builder</name>
+    <!-- Other plugin configuration here -->
+
+    <!-- Define your module type -->
+    <extensions defaultExtensionNs="com.intellij">
+        <moduleTypeFactory id="REACT_BUILDER_MODULE" factoryClass="com.sample.ReactBuilderModuleTypeFactory"/>
+        <!-- Register your module builder -->
+        <moduleBuilder builderClass="com.sample.ReactBuilderModuleBuilder"/>
+    </extensions>
+</idea-plugin>
