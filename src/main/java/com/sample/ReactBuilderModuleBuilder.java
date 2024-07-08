@@ -7,7 +7,9 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.module.ModuleType;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.roots.ModifiableRootModel;
+import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.ui.table.JBTable;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -74,7 +76,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             JTextField packageNameField = new JTextField();
             JTextField domainClassNameField = new JTextField();
             DefaultTableModel tableModel = new DefaultTableModel(new Object[]{"attributeName", "dataType", "isId", "fieldType"}, 0);
-            JTable table = new JTable(tableModel);
+            JBTable table = new JBTable(tableModel);
 
             @Override
             public JComponent getComponent() {
@@ -96,21 +98,21 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
 
                 // Set up the editors for the table columns
                 TableColumn dataTypeColumn = table.getColumnModel().getColumn(1);
-                JComboBox<String> dataTypeEditor = new JComboBox<>(new String[]{"String", "Integer", "Long", "Double"});
+                ComboBox<String> dataTypeEditor = new ComboBox<>(new String[]{"String", "Integer", "Long", "Double"});
                 dataTypeColumn.setCellEditor(new DefaultCellEditor(dataTypeEditor));
 
                 TableColumn isIdColumn = table.getColumnModel().getColumn(2);
                 isIdColumn.setCellEditor(new DefaultCellEditor(new JCheckBox()));
 
                 TableColumn fieldTypeColumn = table.getColumnModel().getColumn(3);
-                JComboBox<String> fieldTypeEditor = new JComboBox<>(new String[]{"Text", "Number", "Checkbox"});
+                ComboBox<String> fieldTypeEditor = new ComboBox<>(new String[]{"Text", "Number", "Checkbox"});
                 fieldTypeColumn.setCellEditor(new DefaultCellEditor(fieldTypeEditor));
 
                 panel.add(new JScrollPane(table), gbc);
 
                 // Add Row button
                 JButton addRowButton = new JButton("Add Row");
-                addRowButton.addActionListener(e -> tableModel.addRow(new Object[]{"", "", false, ""}));
+                addRowButton.addActionListener(e -> tableModel.addRow(new Object[]{"", "String", false, "Text"}));
                 panel.add(addRowButton, gbc);
 
                 // Delete Row button
