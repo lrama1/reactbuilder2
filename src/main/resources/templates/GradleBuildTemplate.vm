@@ -1,0 +1,101 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+plugins {
+id 'java'
+id 'org.springframework.boot' version '3.3.0'
+id 'io.spring.dependency-management' version '1.0.12.RELEASE'
+id 'war'
+id 'groovy'
+id 'com.github.node-gradle.node' version '3.4.0'
+}
+
+group 'com.sample'
+version '1.0-SNAPSHOT'
+
+repositories {
+mavenCentral()
+}
+
+tasks.withType(JavaCompile) {
+options.encoding = 'UTF-8'
+}
+
+dependencies {
+implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+//implementation 'org.hibernate.common:hibernate-commons-annotations:5.1.0.Final'
+implementation 'org.springframework.boot:spring-boot-starter-validation'
+implementation 'org.springframework.session:spring-session-core'
+implementation 'org.springframework.boot:spring-boot-starter-aop'
+implementation 'org.springframework.boot:spring-boot-starter-cache'
+implementation 'org.springframework.boot:spring-boot-starter-security'
+implementation 'org.springframework.boot:spring-boot-starter-web'
+implementation 'jakarta.servlet.jsp.jstl:jakarta.servlet.jsp.jstl-api'
+implementation 'org.quartz-scheduler:quartz:2.2.3'
+implementation 'net.sf.ehcache:ehcache-core:2.6.10'
+runtimeOnly 'org.hsqldb:hsqldb:2.5.2'
+runtimeOnly 'org.springframework.boot:spring-boot-devtools'
+testImplementation 'org.springframework.boot:spring-boot-starter-test'
+testImplementation 'org.powermock:powermock-module-junit4:2.0.0'
+testImplementation 'org.powermock:powermock-api-mockito2:2.0.0'
+
+//implementation 'org.codehaus.groovy:groovy'
+providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+testImplementation 'org.springframework.boot:spring-boot-starter-test'
+runtimeOnly 'org.apache.tomcat.embed:tomcat-embed-jasper'
+}
+
+/*
+task installNodeModules(type: Exec){
+if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+workingDir "${project.projectDir}\\src\\ui"
+commandLine 'cmd', '/c', 'yarn', 'install'
+}else{
+workingDir "${project.projectDir}/src/ui"
+commandLine 'yarn', 'install'
+}
+doFirst{
+println "***************** Installing Modules**************************"
+}
+}
+
+task buildUI(type: Exec){
+dependsOn 'installNodeModules'
+if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+workingDir "${project.projectDir}\\src\\ui"
+commandLine 'cmd', '/c', 'yarn', 'build'
+
+}else{
+workingDir "${project.projectDir}/src/ui"
+commandLine 'yarn', 'build'
+}
+doFirst{
+println "***************** Building the UI**************************"
+}
+}
+
+task deletePreviousUI(type: Delete){
+if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+delete fileTree("${project.projectDir}\\src\\main\\resources\\public")
+}else{
+delete fileTree("${project.projectDir}/src/main/resources/public")
+}
+doFirst{
+println "*****************Deleting previous files*****************"
+}
+}
+
+task copyTask(type: Copy) {
+dependsOn 'buildUI', 'deletePreviousUI'
+from "${project.projectDir}/src/ui/build"
+into "${project.projectDir}/src/main/resources/public"
+doFirst{
+println "*****************Copying files**************************"
+}
+}
+
+war{
+processResources{
+dependsOn 'copyTask'
+}
+}
+*/

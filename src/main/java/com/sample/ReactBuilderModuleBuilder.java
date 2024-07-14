@@ -20,10 +20,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import java.awt.*;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.util.*;
 
 public class ReactBuilderModuleBuilder extends ModuleBuilder {
@@ -46,6 +43,15 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 FileUtil.ensureExists(new File(srcPath));
                 addSourceRoot(modifiableRootModel, new File(srcPath));
                 createJavaClass(srcPath, domainClassName, tableData);
+
+                // Create the Gradle build file
+                createGradleBuildFile(path, modifiableRootModel.getProject().getName());
+
+                // Create the .idea directory and modules.xml file
+                createIdeaConfigFiles(path, modifiableRootModel.getProject().getName());
+
+                // Create the Spring Boot starter class
+                createSpringBootStarterClass(srcPath, packageName);
             } catch (IOException e) {
                 throw new ConfigurationException("Could not create source directory", "Error");
             }
@@ -57,8 +63,6 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         ClassLoader loader = thread.getContextClassLoader();
         thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
         try {
-
-
             VelocityEngine velocityEngine = new VelocityEngine();
 
             // Set the resource loader to load resources from the classpath
@@ -93,6 +97,89 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             e.printStackTrace();
         } finally {
             thread.setContextClassLoader(loader);
+        }
+    }
+
+    private void createGradleBuildFile(String path, String projectName) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        try {
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate("templates/GradleBuildTemplate.vm");
+
+            VelocityContext context = new VelocityContext();
+            context.put("projectName", projectName); // Add the project name to the context
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(path, "build.gradle");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
+
+    private void createSpringBootStarterClass(String path, String packageName) {
+    Thread thread = Thread.currentThread();
+    ClassLoader loader = thread.getContextClassLoader();
+    thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+    try {
+        VelocityEngine velocityEngine = new VelocityEngine();
+
+        // Set the resource loader to load resources from the classpath
+        Properties props = new Properties();
+        props.setProperty("resource.loader", "classpath");
+        props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+        velocityEngine.init(props);
+
+        Template template = velocityEngine.getTemplate("templates/java/springboot-start-template.java");
+
+        VelocityContext context = new VelocityContext();
+        context.put("packageName", packageName); // Add the package name to the context
+
+        StringWriter writer = new StringWriter();
+        template.merge(context, writer);
+
+        File file = new File(path, "SpringBootStarter.java");
+        try (PrintWriter out = new PrintWriter(file)) {
+            out.println(writer.toString());
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    } finally {
+        thread.setContextClassLoader(loader);
+    }
+}
+
+    private void createIdeaConfigFiles(String path, String projectName) {
+        File ideaDir = new File(path, ".idea");
+        ideaDir.mkdir();
+
+        File modulesFile = new File(ideaDir, "modules.xml");
+        try (PrintWriter out = new PrintWriter(modulesFile)) {
+            out.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            out.println("<project version=\"4\">");
+            out.println("  <component name=\"ProjectModuleManager\">");
+            out.println("    <modules>");
+            out.println("      <module fileurl=\"file://$PROJECT_DIR$/" + projectName + ".iml\" filepath=\"$PROJECT_DIR$/" + projectName + ".iml\" />");
+            out.println("    </modules>");
+            out.println("  </component>");
+            out.println("</project>");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
