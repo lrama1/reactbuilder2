@@ -1,0 +1,18 @@
+#set( $symbol_pound = '#' )
+#set( $symbol_dollar = '$' )
+#set( $symbol_escape = '\' )
+package ${packageName};
+
+public class ${className} {
+#foreach( $attribute in $attributes )
+private ${attribute.dataType} ${attribute.name};
+
+public ${attribute.dataType} get${attribute.name.substring(0,1).toUpperCase()}${attribute.name.substring(1)}() {
+return this.${attribute.name};
+}
+
+public void set${attribute.name.substring(0,1).toUpperCase()}${attribute.name.substring(1)}(${attribute.dataType} ${attribute.name}) {
+this.${attribute.name} = ${attribute.name};
+}
+#end
+}

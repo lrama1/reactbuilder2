@@ -10,6 +10,10 @@ import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.ui.table.JBTable;
+import org.apache.velocity.Template;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.app.VelocityEngine;
+import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -19,12 +23,19 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Vector;
+import java.io.StringWriter;
+import java.util.*;
 
 public class ReactBuilderModuleBuilder extends ModuleBuilder {
     private String packageName;
     private String domainClassName;
     private Vector<Vector> tableData;
+
+    private static String USER_HOME;
+
+    static {
+        USER_HOME = System.getProperty("user.home");
+    }
 
     @Override
     public void setupRootModel(@NotNull ModifiableRootModel modifiableRootModel) throws ConfigurationException {
@@ -41,18 +52,47 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         }
     }
 
-    private void createJavaClass(String path, String className, Vector<Vector> data) throws IOException {
-        File file = new File(path, className + ".java");
-        try (PrintWriter out = new PrintWriter(file)) {
-            out.println("package " + packageName + ";");
-            out.println();
-            out.println("public class " + className + " {");
+    private void createJavaClass(String path, String className, Vector<Vector> data) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        try {
+
+
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate("templates/ClassTemplate.vm");
+
+            VelocityContext context = new VelocityContext();
+            context.put("packageName", packageName);
+            context.put("className", className);
+
+            ArrayList<Map<String, String>> attributes = new ArrayList<>();
             for (Vector<Object> row : data) {
-                String attributeName = (String) row.get(0);
-                String dataType = (String) row.get(1);
-                out.println("    private " + dataType + " " + attributeName + ";");
+                Map<String, String> attribute = new HashMap<>();
+                attribute.put("name", (String) row.get(0));
+                attribute.put("dataType", (String) row.get(1));
+                attributes.add(attribute);
             }
-            out.println("}");
+            context.put("attributes", attributes);
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(path, className + ".java");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
         }
     }
 
@@ -93,7 +133,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 panel.add(domainClassNameField, gbc);
 
                 // Set up the table
-                table.setPreferredScrollableViewportSize(new Dimension(500, 70));
+                table.setPreferredScrollableViewportSize(new Dimension(500, 150));
                 table.setFillsViewportHeight(true);
 
                 // Set up the editors for the table columns
