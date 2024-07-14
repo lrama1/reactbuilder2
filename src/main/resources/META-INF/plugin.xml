@@ -1,4 +1,4 @@
-<idea-plugin >
+<idea-plugin>
     <id>com.sample</id>
     <name>React Module Builder</name>
     <!-- Other plugin configuration here -->
@@ -9,4 +9,5 @@
         <!-- Register your module builder -->
         <moduleBuilder builderClass="com.sample.ReactBuilderModuleBuilder"/>
     </extensions>
+
 </idea-plugin>

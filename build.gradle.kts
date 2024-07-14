@@ -9,15 +9,29 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
+    maven("https://cache-redirector.jetbrains.com/intellij-dependencies")
 }
 
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
-    version.set("2023.2.6")
+    version.set("2024.1.4")
     type.set("IC") // Target IDE Platform
 
-    plugins.set(listOf(/* Plugin Dependencies */))
+    plugins.set(
+        listOf(
+            "org.jetbrains.kotlin",
+            "org.jetbrains.plugins.yaml",
+            "org.jetbrains.plugins.gradle",
+            "org.jetbrains.plugins.github",
+            "org.jetbrains.plugins.yaml",
+            "org.jetbrains.plugins.terminal",
+            "org.jetbrains.plugins.gradle",
+            "org.jetbrains.plugins.github",
+
+            )
+    )
 }
 
 tasks {
@@ -45,3 +59,4 @@ tasks {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
 }
+
