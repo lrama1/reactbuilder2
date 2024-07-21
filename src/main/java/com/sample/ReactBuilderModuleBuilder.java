@@ -9,6 +9,8 @@ import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.roots.ModifiableRootModel;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.table.JBTable;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
@@ -277,10 +279,10 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
     }
 
     private void addSourceRoot(@NotNull ModifiableRootModel modifiableRootModel, File srcPath) {
-        var root = modifiableRootModel.getProject().getBaseDir();
-        var srcDir = root.findChild("src");
-        if (srcDir != null) {
-            modifiableRootModel.addContentEntry(srcDir);
+        String basePath = modifiableRootModel.getProject().getBasePath();
+        if (basePath != null) {
+            VirtualFile root = LocalFileSystem.getInstance().findFileByPath(basePath);
+            modifiableRootModel.addContentEntry(root);
         }
     }
 
