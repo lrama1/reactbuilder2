@@ -26,7 +26,7 @@ import java.util.*;
 public class ReactBuilderModuleBuilder extends ModuleBuilder {
     private String packageName;
     private String domainClassName;
-    private Vector<Vector> tableData;
+    private Vector<Vector> listOfAttributes;
     private String persistenceType;
 
     private static String USER_HOME;
@@ -43,7 +43,6 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             try {
                 FileUtil.ensureExists(new File(srcPath));
                 addSourceRoot(modifiableRootModel, new File(srcPath));
-                createJavaClass(srcPath, domainClassName, tableData);
 
                 // Create the Gradle build file
                 createGradleBuildFile(path, modifiableRootModel.getProject().getName());
@@ -52,20 +51,20 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 createIdeaConfigFiles(path, modifiableRootModel.getProject().getName());
 
                 // Create the Spring Boot starter class
-                createSpringBootStarterClass(srcPath, packageName);
-
-                createRepositoryClass(srcPath, packageName, domainClassName, tableData, persistenceType); // Invoke createRepositoryClass here
+                createSpringBootStarterClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
+                createJavaClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
+                createRepositoryClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType); // Invoke createRepositoryClass here
 
                 // Create the ListWrapper class
-                createCommonClass(srcPath, packageName, "templates/java/listwrapper-template.java", "ListWrapper");
-                createCommonClass(srcPath, packageName, "templates/java/sortedIndicator-template.java", "SortedIndicator");
+                createCommonClass(srcPath, packageName, "ListWrapper", listOfAttributes, persistenceType, "templates/java/listwrapper-template.java");
+                createCommonClass(srcPath, packageName, "SortedIndicator", listOfAttributes, persistenceType, "templates/java/sortedIndicator-template.java");
             } catch (IOException e) {
                 throw new ConfigurationException("Could not create source directory", "Error");
             }
         }
     }
 
-    private void createJavaClass(String path, String className, Vector<Vector> data) {
+    private void createJavaClass(String path, String packageName, String className, Vector<Vector> listOfAttributesFromTable, String persistenceType) {
         Thread thread = Thread.currentThread();
         ClassLoader loader = thread.getContextClassLoader();
         thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
@@ -87,7 +86,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             context.put("className", className);
 
             ArrayList<Map<String, String>> attributes = new ArrayList<>();
-            for (Vector<Object> row : data) {
+            for (Vector<Object> row : listOfAttributesFromTable) {
                 Map<String, String> attribute = new HashMap<>();
                 attribute.put("name", (String) row.get(0));
                 attribute.put("dataType", (String) row.get(1));
@@ -141,7 +140,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         }
     }
 
-    private void createSpringBootStarterClass(String path, String packageName) {
+    private void createSpringBootStarterClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
         Thread thread = Thread.currentThread();
         ClassLoader loader = thread.getContextClassLoader();
         thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
@@ -218,7 +217,8 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         }
     }
 
-    private void createCommonClass(String path, String packageName, String templateName, String className) {
+    private void createCommonClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType,
+                                   String templateName) {
         Thread thread = Thread.currentThread();
         ClassLoader loader = thread.getContextClassLoader();
         thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
@@ -351,7 +351,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 // Update the data model with the values from the text fields
                 packageName = packageNameField.getText();
                 domainClassName = domainClassNameField.getText();
-                tableData = tableModel.getDataVector();
+                listOfAttributes = tableModel.getDataVector();
                 persistenceType = (String) persistenceTypeComboBox.getSelectedItem(); // Get the selected persistence type
             }
         };
