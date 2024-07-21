@@ -1,7 +1,7 @@
 #set( $symbol_pound = '#' )
 #set( $symbol_dollar = '$' )
 #set( $symbol_escape = '\' )
-package ${packageName};
+package ${packageName}.domain;
 
 public class ${className} {
 #foreach( $attribute in $attributes )

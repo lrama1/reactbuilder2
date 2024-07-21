@@ -27,6 +27,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
     private String packageName;
     private String domainClassName;
     private Vector<Vector> tableData;
+    private String persistenceType;
 
     private static String USER_HOME;
 
@@ -52,6 +53,12 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
 
                 // Create the Spring Boot starter class
                 createSpringBootStarterClass(srcPath, packageName);
+
+                createRepositoryClass(srcPath, packageName, domainClassName, tableData, persistenceType); // Invoke createRepositoryClass here
+
+                // Create the ListWrapper class
+                createCommonClass(srcPath, packageName, "templates/java/listwrapper-template.java", "ListWrapper");
+                createCommonClass(srcPath, packageName, "templates/java/sortedIndicator-template.java", "SortedIndicator");
             } catch (IOException e) {
                 throw new ConfigurationException("Could not create source directory", "Error");
             }
@@ -62,7 +69,9 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         Thread thread = Thread.currentThread();
         ClassLoader loader = thread.getContextClassLoader();
         thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        String domainPath = path + "/domain/";
         try {
+            FileUtil.ensureExists(new File(domainPath));
             VelocityEngine velocityEngine = new VelocityEngine();
 
             // Set the resource loader to load resources from the classpath
@@ -89,7 +98,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             StringWriter writer = new StringWriter();
             template.merge(context, writer);
 
-            File file = new File(path, className + ".java");
+            File file = new File(domainPath, className + ".java");
             try (PrintWriter out = new PrintWriter(file)) {
                 out.println(writer.toString());
             }
@@ -133,36 +142,115 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
     }
 
     private void createSpringBootStarterClass(String path, String packageName) {
-    Thread thread = Thread.currentThread();
-    ClassLoader loader = thread.getContextClassLoader();
-    thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-    try {
-        VelocityEngine velocityEngine = new VelocityEngine();
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        try {
+            VelocityEngine velocityEngine = new VelocityEngine();
 
-        // Set the resource loader to load resources from the classpath
-        Properties props = new Properties();
-        props.setProperty("resource.loader", "classpath");
-        props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
-        velocityEngine.init(props);
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
 
-        Template template = velocityEngine.getTemplate("templates/java/springboot-start-template.java");
+            Template template = velocityEngine.getTemplate("templates/java/springboot-start-template.java");
 
-        VelocityContext context = new VelocityContext();
-        context.put("packageName", packageName); // Add the package name to the context
+            VelocityContext context = new VelocityContext();
+            context.put("packageName", packageName); // Add the package name to the context
 
-        StringWriter writer = new StringWriter();
-        template.merge(context, writer);
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
 
-        File file = new File(path, "SpringBootStarter.java");
-        try (PrintWriter out = new PrintWriter(file)) {
-            out.println(writer.toString());
+            File file = new File(path, "SpringBootStarter.java");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
         }
-    } catch (Exception e) {
-        e.printStackTrace();
-    } finally {
-        thread.setContextClassLoader(loader);
     }
-}
+
+    private void createRepositoryClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        String repositoryPath = path + "/dao/";
+        try {
+            FileUtil.ensureExists(new File(repositoryPath));
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate("templates/java/repository-template.java");
+
+            VelocityContext context = new VelocityContext();
+            context.put("domainClassName", className);
+            context.put("persistenceType", persistenceType);
+            context.put("packageName", packageName);
+
+            ArrayList<Map<String, String>> attributes = new ArrayList<>();
+            for (Vector<Object> row : data) {
+                Map<String, String> attribute = new HashMap<>();
+                attribute.put("name", (String) row.get(0));
+                attribute.put("dataType", (String) row.get(1));
+                attributes.add(attribute);
+            }
+            context.put("attributes", attributes);
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(repositoryPath, className + "Repository.java");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
+
+    private void createCommonClass(String path, String packageName, String templateName, String className) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        String commonPath = path + "/common/";
+        try {
+            FileUtil.ensureExists(new File(commonPath));
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate(templateName);
+
+            VelocityContext context = new VelocityContext();
+            context.put("packageName", packageName);
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(commonPath, className + ".java");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
 
     private void createIdeaConfigFiles(String path, String projectName) {
         File ideaDir = new File(path, ".idea");
@@ -204,6 +292,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             JTextField domainClassNameField = new JTextField();
             DefaultTableModel tableModel = new DefaultTableModel(new Object[]{"attributeName", "dataType", "isId", "fieldType"}, 0);
             JBTable table = new JBTable(tableModel);
+            JComboBox<String> persistenceTypeComboBox = new JComboBox<>(new String[]{"HSQL", "Mongo"}); // Add the combo box
 
             @Override
             public JComponent getComponent() {
@@ -218,6 +307,8 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 panel.add(packageNameField, gbc);
                 panel.add(new JLabel("Domain Class Name:"), gbc);
                 panel.add(domainClassNameField, gbc);
+                panel.add(new JLabel("Persistence Type:"), gbc); // Add the label
+                panel.add(persistenceTypeComboBox, gbc); // Add the combo box
 
                 // Set up the table
                 table.setPreferredScrollableViewportSize(new Dimension(500, 150));
@@ -261,6 +352,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 packageName = packageNameField.getText();
                 domainClassName = domainClassNameField.getText();
                 tableData = tableModel.getDataVector();
+                persistenceType = (String) persistenceTypeComboBox.getSelectedItem(); // Get the selected persistence type
             }
         };
     }
