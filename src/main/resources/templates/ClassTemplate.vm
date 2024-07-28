@@ -1,18 +1,65 @@
-#set( $symbol_pound = '#' )
-#set( $symbol_dollar = '$' )
-#set( $symbol_escape = '\' )
+#set( $domainObjectName = $className.substring(0,1).toLowerCase() + $className.substring(1) )
 package ${packageName}.domain;
+import jakarta.validation.constraints.NotBlank;
+import java.util.Set;
+import java.util.Date;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.CascadeType;
+#if(${persistenceType} == 'Mongo')
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-public class ${className} {
-#foreach( $attribute in $attributes )
-private ${attribute.dataType} ${attribute.name};
+@Document(collection = "${className.toLowerCase()}s")
+#else
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 
-public ${attribute.dataType} get${attribute.name.substring(0,1).toUpperCase()}${attribute.name.substring(1)}() {
-return this.${attribute.name};
-}
-
-public void set${attribute.name.substring(0,1).toUpperCase()}${attribute.name.substring(1)}(${attribute.dataType} ${attribute.name}) {
-this.${attribute.name} = ${attribute.name};
-}
+@Entity(name = "${domainObjectName}")
 #end
+public class $className
+{
+#foreach($attribute in $attributes )
+    #if(${attribute.dataType} == 'Date')
+        #if(${persistenceType} == 'Mongo' && ${domainClassIdAttributeName} == ${attribute.name})
+        @Id
+        #end
+    private Date ${attribute.name};
+    #elseif(${attribute.dataType} == 'String')
+        #if((${persistenceType} == 'Mongo'  || ${persistenceType} == 'HSQL') && ${domainClassIdAttributeName} == ${attribute.name})
+        @Id
+        #end
+    private ${attribute.dataType} ${attribute.name};
+    #elseif(${attribute.dataType} == 'Integer')
+        #if((${persistenceType} == 'Mongo'  || ${persistenceType} == 'HSQL') && ${domainClassIdAttributeName} == ${attribute.name})
+        @Id
+        #end
+    private ${attribute.dataType} ${attribute.name};
+    #end
+
+    public ${attribute.dataType} get${attribute.name.substring(0,1).toUpperCase()}${attribute.name.substring(1)}() {
+      return this.${attribute.name};
+    }
+
+    public void set${attribute.name.substring(0,1).toUpperCase()}${attribute.name.substring(1)}(${attribute.dataType} ${attribute.name}) {
+      this.${attribute.name} = ${attribute.name};
+    }
+#end
+
+
+
+public String toString(){
+return
+#foreach($attribute in $attributes )
+    #if($foreach.count == 1)
+    "${attribute.name} = " + ${attribute.name}
+    #else
+    + ", ${attribute.name} = " + ${attribute.name}
+    #end
+#end
+;
+}
 }

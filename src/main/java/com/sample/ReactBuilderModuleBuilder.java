@@ -57,10 +57,12 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 createJavaClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
                 createRepositoryClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType); // Invoke createRepositoryClass here
                 createServiceClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
+                createControllerClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
 
                 // Create the ListWrapper class
                 createCommonClass(srcPath, packageName, "ListWrapper", listOfAttributes, persistenceType, "templates/java/listwrapper-template.java");
                 createCommonClass(srcPath, packageName, "SortedIndicator", listOfAttributes, persistenceType, "templates/java/sortedIndicator-template.java");
+                createCommonClass(srcPath, packageName, "NameValuePair", listOfAttributes, persistenceType, "templates/java/namevalue-template.java");
             } catch (IOException e) {
                 throw new ConfigurationException("Could not create source directory", "Error");
             }
@@ -87,6 +89,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             VelocityContext context = new VelocityContext();
             context.put("packageName", packageName);
             context.put("className", className);
+            context.put("persistenceType", persistenceType);
 
             ArrayList<Map<String, String>> attributes = new ArrayList<>();
             for (Vector<Object> row : listOfAttributesFromTable) {
@@ -96,6 +99,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 attributes.add(attribute);
             }
             context.put("attributes", attributes);
+            context.put("domainClassIdAttributeName", getIdAttributeName(listOfAttributesFromTable));
 
             StringWriter writer = new StringWriter();
             template.merge(context, writer);
@@ -290,6 +294,50 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             template.merge(context, writer);
 
             File file = new File(commonPath, className + ".java");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
+
+    private void createControllerClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        String controllerPath = path + "/controller/";
+        try {
+            FileUtil.ensureExists(new File(controllerPath));
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate("templates/java/controller-template.java");
+
+            VelocityContext context = new VelocityContext();
+            context.put("domainClassName", className);
+            context.put("packageName", packageName);
+
+            ArrayList<Map<String, String>> attributes = new ArrayList<>();
+            for (Vector<Object> row : data) {
+                Map<String, String> attribute = new HashMap<>();
+                attribute.put("name", (String) row.get(0));
+                attribute.put("dataType", (String) row.get(1));
+                attributes.add(attribute);
+            }
+            context.put("attributes", attributes);
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(controllerPath, className + "Controller.java");
             try (PrintWriter out = new PrintWriter(file)) {
                 out.println(writer.toString());
             }
