@@ -27,7 +27,7 @@ public class ${domainClassName}Service {
         //return ${domainClassName.substring(0,1).toLowerCase()}${domainClassName.substring(1)}DAO.get${domainClassName}s(pageNumber, pageSize, sortByAttribute, sortDirection);
 
         PageRequest request = PageRequest.of(pageNumber - 1, pageSize);
-        if(!"".equals(sortByAttribute)) {
+        if(!"".equals(sortByAttribute) && sortByAttribute != null) {
             Sort sortSetting = Sort.by("1".equals(sortDirection)?Direction.ASC: Direction.DESC, sortByAttribute);
             request = PageRequest.of(pageNumber - 1, pageSize, sortSetting);
         }

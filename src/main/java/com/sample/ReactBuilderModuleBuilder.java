@@ -12,6 +12,7 @@ import com.intellij.openapi.util.io.FileUtil;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.table.JBTable;
+import com.sample.utils.DBUtil;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -63,6 +64,13 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 createCommonClass(srcPath, packageName, "ListWrapper", listOfAttributes, persistenceType, "templates/java/listwrapper-template.java");
                 createCommonClass(srcPath, packageName, "SortedIndicator", listOfAttributes, persistenceType, "templates/java/sortedIndicator-template.java");
                 createCommonClass(srcPath, packageName, "NameValuePair", listOfAttributes, persistenceType, "templates/java/namevalue-template.java");
+
+                createSchemaSQL(path, packageName, domainClassName, listOfAttributes, persistenceType);
+                createDataSQL(path, packageName, domainClassName, listOfAttributes, persistenceType);
+
+                createApplicationProperties(path, packageName, domainClassName, listOfAttributes, persistenceType);
+
+                createImlFile(path, modifiableRootModel.getProject().getName());
             } catch (IOException e) {
                 throw new ConfigurationException("Could not create source directory", "Error");
             }
@@ -348,6 +356,131 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         }
     }
 
+    private void createSchemaSQL(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        String resourcesPath = path + "/src/main/resources/";
+        try {
+            FileUtil.ensureExists(new File(resourcesPath));
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate("templates/hsql/schema-template.sql");
+
+            VelocityContext context = new VelocityContext();
+            context.put("domainClassName", className);
+            context.put("domainVar", className.substring(0,1).toLowerCase() + className.substring(1));
+            context.put("domainClassIdAttributeName", getIdAttributeName(data));
+            context.put("persistenceType", persistenceType);
+
+
+            Map<String, String> attributes = new LinkedHashMap<>();
+            for (Vector<Object> row : data) {
+                attributes.put((String) row.get(0), (String) row.get(1));
+            }
+            context.put("attributes", attributes);
+            context.put("oracleNames", DBUtil.getOracleDerivedNamesForTableAndAttrs(className, attributes, persistenceType.equals("HSQL")));
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(resourcesPath, "schema.sql");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
+
+    private void createDataSQL(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        String resourcesPath = path + "/src/main/resources/";
+        try {
+            FileUtil.ensureExists(new File(resourcesPath));
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate("templates/hsql/data-template.sql");
+
+            VelocityContext context = new VelocityContext();
+            context.put("domainClassName", className);
+            context.put("domainVar", className.substring(0,1).toLowerCase() + className.substring(1));
+            context.put("persistenceType", persistenceType);
+
+            Map<String, String> attributes = new LinkedHashMap<>();
+            for (Vector<Object> row : data) {
+                attributes.put((String) row.get(0), (String) row.get(1));
+            }
+            context.put("attributes", attributes);
+            context.put("oracleNames", DBUtil.getOracleDerivedNamesForTableAndAttrs(className, attributes, persistenceType.equals("HSQL")));
+
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(resourcesPath, "data.sql");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
+
+    private void createApplicationProperties(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        String resourcesPath = path + "/src/main/resources/";
+        try {
+            FileUtil.ensureExists(new File(resourcesPath));
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate("templates/spring/application-template.properties");
+
+            VelocityContext context = new VelocityContext();
+            context.put("domainClassName", className);
+            context.put("packageName", packageName);
+            context.put("persistenceType", persistenceType);
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(resourcesPath, "application.properties");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
+
     private void createIdeaConfigFiles(String path, String projectName) {
         File ideaDir = new File(path, ".idea");
         ideaDir.mkdir();
@@ -362,6 +495,28 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             out.println("    </modules>");
             out.println("  </component>");
             out.println("</project>");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void createImlFile(String path, String projectName) {
+        String content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<module type=\"JAVA_MODULE\" version=\"4\">\n" +
+                "  <component name=\"NewModuleRootManager\" inherit-compiler-output=\"true\">\n" +
+                "    <exclude-output />\n" +
+                "    <content url=\"file://$MODULE_DIR$\">\n" +
+                "      <sourceFolder url=\"file://$MODULE_DIR$/src/main/java\" isTestSource=\"false\" />\n" +
+                "      <sourceFolder url=\"file://$MODULE_DIR$/src/main/resources\" type=\"java-resource\" />\n" +
+                "    </content>\n" +
+                "    <orderEntry type=\"inheritedJdk\" />\n" +
+                "    <orderEntry type=\"sourceFolder\" forTests=\"false\" />\n" +
+                "  </component>\n" +
+                "</module>";
+
+        File file = new File(path, projectName + ".iml");
+        try (PrintWriter out = new PrintWriter(file)) {
+            out.println(content);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }

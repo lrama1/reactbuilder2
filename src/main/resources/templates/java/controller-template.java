@@ -62,8 +62,8 @@ public class ${domainClassName}Controller {
 
 	@RequestMapping("/${domainObjectName}s")
 	public ListWrapper<${domainClassName}> getAll${domainClassName}s(
-    @RequestParam("page") int pageNumber,
-    @RequestParam("per_page") int pageSize,
+    @RequestParam(value = "page", defaultValue = "1") int pageNumber,
+    @RequestParam(value = "per_page", defaultValue="10") int pageSize,
     @RequestParam(value = "sort_by", required = false) String sortByAttributeName,
     @RequestParam(value = "order", required = false) String sortDirection) {
         return ${domainObjectName}Service.get${domainClassName}s(pageNumber, pageSize, sortByAttributeName, sortDirection);
