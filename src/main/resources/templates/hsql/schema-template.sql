@@ -1,24 +1,26 @@
 #set($domainVar = $domainClassName.substring(0,1).toLowerCase() + $domainClassName.substring(1))
 CREATE TABLE ${domainVar} (
-    #foreach($key in $attributes.keySet() )
+    #foreach($attribute in $attributes )
     #set($columnName = "")
     #set($datatype = "")
-    #if(${persistenceType} == 'HSQL')
-      #set($columnName = $oracleNames.get(${key}))
-      #else
-      #set($columnName = $key)
-      #end
-      #if($attributes.get(${key}) == 'String')
+	#if(${persistenceType} == 'HSQL')
+      #set($columnName = $oracleNames.get(${attribute.name}))
+    #else
+      #set($columnName = ${attribute.name})
+    #end
+
+    #if(${attribute.dataType} == 'String')
       #set($datatype = "VARCHAR(64)")
-      #elseif($attributes.get(${key}) == 'Date')
+    #elseif(${attribute.dataType} == 'Date')
       #set($datatype = "DATE")
-      #elseif($attributes.get(${key}) == 'Integer')
+    #elseif(${attribute.dataType} == 'Integer')
       #set($datatype = "NUMERIC")
-      #end
-      #if($key == ${domainClassIdAttributeName})
+    #end
+
+    #if(${attribute.name} == ${domainClassIdAttributeName})
       $columnName $datatype PRIMARY KEY
     #else
-    ,$columnName $datatype
+      ,$columnName $datatype
     #end
   #end
 );

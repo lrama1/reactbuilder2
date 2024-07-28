@@ -1,4 +1,4 @@
-#set( $domainObjectName = $className.substring(0,1).toLowerCase() + $className.substring(1) )
+#set( $domainObjectName = $domainClassName.substring(0,1).toLowerCase() + $domainClassName.substring(1) )
 package ${packageName}.domain;
 import jakarta.validation.constraints.NotBlank;
 import java.util.Set;
@@ -13,14 +13,14 @@ import jakarta.persistence.CascadeType;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "${className.toLowerCase()}s")
+@Document(collection = "${domainClassName.toLowerCase()}s")
 #else
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
 @Entity(name = "${domainObjectName}")
 #end
-public class $className
+public class $domainClassName
 {
 #foreach($attribute in $attributes )
     #if(${attribute.dataType} == 'Date')

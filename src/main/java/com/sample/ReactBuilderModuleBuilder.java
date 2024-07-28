@@ -25,6 +25,7 @@ import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.io.*;
 import java.util.*;
+import java.util.List;
 
 public class ReactBuilderModuleBuilder extends ModuleBuilder {
     private String packageName;
@@ -77,13 +78,12 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         }
     }
 
-    private void createJavaClass(String path, String packageName, String className, Vector<Vector> listOfAttributesFromTable, String persistenceType) {
+    private void createFileFromTemplate(String path, String packageName, String className, Vector<Vector> data, String persistenceType, String templateName, String fileName) {
         Thread thread = Thread.currentThread();
         ClassLoader loader = thread.getContextClassLoader();
         thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-        String domainPath = path + "/domain/";
         try {
-            FileUtil.ensureExists(new File(domainPath));
+            FileUtil.ensureExists(new File(path));
             VelocityEngine velocityEngine = new VelocityEngine();
 
             // Set the resource loader to load resources from the classpath
@@ -92,27 +92,30 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
             velocityEngine.init(props);
 
-            Template template = velocityEngine.getTemplate("templates/ClassTemplate.vm");
+            Template template = velocityEngine.getTemplate(templateName);
 
             VelocityContext context = new VelocityContext();
+            context.put("domainClassName", className);
             context.put("packageName", packageName);
-            context.put("className", className);
             context.put("persistenceType", persistenceType);
 
-            ArrayList<Map<String, String>> attributes = new ArrayList<>();
-            for (Vector<Object> row : listOfAttributesFromTable) {
+            List<Map<String, String>> attributes = new ArrayList<>();
+            for (Vector<Object> row : data) {
                 Map<String, String> attribute = new HashMap<>();
                 attribute.put("name", (String) row.get(0));
                 attribute.put("dataType", (String) row.get(1));
                 attributes.add(attribute);
             }
+
             context.put("attributes", attributes);
-            context.put("domainClassIdAttributeName", getIdAttributeName(listOfAttributesFromTable));
+            context.put("domainClassIdAttributeName", getIdAttributeName(data));
+            context.put("oracleNames", DBUtil.getOracleDerivedNamesForTableAndAttrs(className, attributes,
+                    persistenceType.equals("HSQL")));
 
             StringWriter writer = new StringWriter();
             template.merge(context, writer);
 
-            File file = new File(domainPath, className + ".java");
+            File file = new File(path, fileName);
             try (PrintWriter out = new PrintWriter(file)) {
                 out.println(writer.toString());
             }
@@ -122,6 +125,40 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             thread.setContextClassLoader(loader);
         }
     }
+
+    private void createJavaClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/domain/", packageName, className, data, persistenceType, "templates/ClassTemplate.vm", className + ".java");
+    }
+
+    private void createSpringBootStarterClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path, packageName, className, data, persistenceType, "templates/java/springboot-start-template.java", "SpringBootStarter.java");
+    }
+
+    private void createRepositoryClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/dao/", packageName, className, data, persistenceType, "templates/java/repository-template.java", className + "Repository.java");
+    }
+
+    private void createServiceClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/service/", packageName, className, data, persistenceType, "templates/java/service-template.java", className + "Service.java");
+    }
+
+    private void createControllerClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/controller/", packageName, className, data, persistenceType, "templates/java/controller-template.java", className + "Controller.java");
+    }
+
+    private void createSchemaSQL(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/src/main/resources/", packageName, className, data, persistenceType, "templates/hsql/schema-template.sql", "schema.sql");
+    }
+
+    private void createDataSQL(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/src/main/resources/", packageName, className, data, persistenceType, "templates/hsql/data-template.sql", "data.sql");
+    }
+
+    private void createApplicationProperties(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/src/main/resources/", packageName, className, data, persistenceType, "templates/spring/application-template.properties", "application.properties");
+    }
+
+
 
     private void createGradleBuildFile(String path, String projectName) {
         Thread thread = Thread.currentThread();
@@ -145,128 +182,6 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             template.merge(context, writer);
 
             File file = new File(path, "build.gradle");
-            try (PrintWriter out = new PrintWriter(file)) {
-                out.println(writer.toString());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
-    }
-
-    private void createSpringBootStarterClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-        try {
-            VelocityEngine velocityEngine = new VelocityEngine();
-
-            // Set the resource loader to load resources from the classpath
-            Properties props = new Properties();
-            props.setProperty("resource.loader", "classpath");
-            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
-            velocityEngine.init(props);
-
-            Template template = velocityEngine.getTemplate("templates/java/springboot-start-template.java");
-
-            VelocityContext context = new VelocityContext();
-            context.put("packageName", packageName); // Add the package name to the context
-
-            StringWriter writer = new StringWriter();
-            template.merge(context, writer);
-
-            File file = new File(path, "SpringBootStarter.java");
-            try (PrintWriter out = new PrintWriter(file)) {
-                out.println(writer.toString());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
-    }
-
-    private void createRepositoryClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-        String repositoryPath = path + "/dao/";
-        try {
-            FileUtil.ensureExists(new File(repositoryPath));
-            VelocityEngine velocityEngine = new VelocityEngine();
-
-            // Set the resource loader to load resources from the classpath
-            Properties props = new Properties();
-            props.setProperty("resource.loader", "classpath");
-            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
-            velocityEngine.init(props);
-
-            Template template = velocityEngine.getTemplate("templates/java/repository-template.java");
-
-            VelocityContext context = new VelocityContext();
-            context.put("domainClassName", className);
-            context.put("persistenceType", persistenceType);
-            context.put("packageName", packageName);
-
-            ArrayList<Map<String, String>> attributes = new ArrayList<>();
-            for (Vector<Object> row : data) {
-                Map<String, String> attribute = new HashMap<>();
-                attribute.put("name", (String) row.get(0));
-                attribute.put("dataType", (String) row.get(1));
-                attributes.add(attribute);
-            }
-            context.put("attributes", attributes);
-
-            StringWriter writer = new StringWriter();
-            template.merge(context, writer);
-
-            File file = new File(repositoryPath, className + "Repository.java");
-            try (PrintWriter out = new PrintWriter(file)) {
-                out.println(writer.toString());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
-    }
-
-    private void createServiceClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-        String servicePath = path + "/service/";
-        try {
-            FileUtil.ensureExists(new File(servicePath));
-            VelocityEngine velocityEngine = new VelocityEngine();
-
-            // Set the resource loader to load resources from the classpath
-            Properties props = new Properties();
-            props.setProperty("resource.loader", "classpath");
-            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
-            velocityEngine.init(props);
-
-            Template template = velocityEngine.getTemplate("templates/java/service-template.java");
-
-            VelocityContext context = new VelocityContext();
-            context.put("domainClassName", className);
-            context.put("packageName", packageName);
-
-            ArrayList<Map<String, String>> attributes = new ArrayList<>();
-            for (Vector<Object> row : data) {
-                Map<String, String> attribute = new HashMap<>();
-                attribute.put("name", (String) row.get(0));
-                attribute.put("dataType", (String) row.get(1));
-                attributes.add(attribute);
-            }
-            context.put("attributes", attributes);
-            context.put("domainClassIdAttributeName", getIdAttributeName(data));
-
-            StringWriter writer = new StringWriter();
-            template.merge(context, writer);
-
-            File file = new File(servicePath, className + "Service.java");
             try (PrintWriter out = new PrintWriter(file)) {
                 out.println(writer.toString());
             }
@@ -302,175 +217,6 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             template.merge(context, writer);
 
             File file = new File(commonPath, className + ".java");
-            try (PrintWriter out = new PrintWriter(file)) {
-                out.println(writer.toString());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
-    }
-
-    private void createControllerClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-        String controllerPath = path + "/controller/";
-        try {
-            FileUtil.ensureExists(new File(controllerPath));
-            VelocityEngine velocityEngine = new VelocityEngine();
-
-            // Set the resource loader to load resources from the classpath
-            Properties props = new Properties();
-            props.setProperty("resource.loader", "classpath");
-            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
-            velocityEngine.init(props);
-
-            Template template = velocityEngine.getTemplate("templates/java/controller-template.java");
-
-            VelocityContext context = new VelocityContext();
-            context.put("domainClassName", className);
-            context.put("packageName", packageName);
-
-            ArrayList<Map<String, String>> attributes = new ArrayList<>();
-            for (Vector<Object> row : data) {
-                Map<String, String> attribute = new HashMap<>();
-                attribute.put("name", (String) row.get(0));
-                attribute.put("dataType", (String) row.get(1));
-                attributes.add(attribute);
-            }
-            context.put("attributes", attributes);
-
-            StringWriter writer = new StringWriter();
-            template.merge(context, writer);
-
-            File file = new File(controllerPath, className + "Controller.java");
-            try (PrintWriter out = new PrintWriter(file)) {
-                out.println(writer.toString());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
-    }
-
-    private void createSchemaSQL(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-        String resourcesPath = path + "/src/main/resources/";
-        try {
-            FileUtil.ensureExists(new File(resourcesPath));
-            VelocityEngine velocityEngine = new VelocityEngine();
-
-            // Set the resource loader to load resources from the classpath
-            Properties props = new Properties();
-            props.setProperty("resource.loader", "classpath");
-            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
-            velocityEngine.init(props);
-
-            Template template = velocityEngine.getTemplate("templates/hsql/schema-template.sql");
-
-            VelocityContext context = new VelocityContext();
-            context.put("domainClassName", className);
-            context.put("domainVar", className.substring(0,1).toLowerCase() + className.substring(1));
-            context.put("domainClassIdAttributeName", getIdAttributeName(data));
-            context.put("persistenceType", persistenceType);
-
-
-            Map<String, String> attributes = new LinkedHashMap<>();
-            for (Vector<Object> row : data) {
-                attributes.put((String) row.get(0), (String) row.get(1));
-            }
-            context.put("attributes", attributes);
-            context.put("oracleNames", DBUtil.getOracleDerivedNamesForTableAndAttrs(className, attributes, persistenceType.equals("HSQL")));
-
-            StringWriter writer = new StringWriter();
-            template.merge(context, writer);
-
-            File file = new File(resourcesPath, "schema.sql");
-            try (PrintWriter out = new PrintWriter(file)) {
-                out.println(writer.toString());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
-    }
-
-    private void createDataSQL(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-        String resourcesPath = path + "/src/main/resources/";
-        try {
-            FileUtil.ensureExists(new File(resourcesPath));
-            VelocityEngine velocityEngine = new VelocityEngine();
-
-            // Set the resource loader to load resources from the classpath
-            Properties props = new Properties();
-            props.setProperty("resource.loader", "classpath");
-            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
-            velocityEngine.init(props);
-
-            Template template = velocityEngine.getTemplate("templates/hsql/data-template.sql");
-
-            VelocityContext context = new VelocityContext();
-            context.put("domainClassName", className);
-            context.put("domainVar", className.substring(0,1).toLowerCase() + className.substring(1));
-            context.put("persistenceType", persistenceType);
-
-            Map<String, String> attributes = new LinkedHashMap<>();
-            for (Vector<Object> row : data) {
-                attributes.put((String) row.get(0), (String) row.get(1));
-            }
-            context.put("attributes", attributes);
-            context.put("oracleNames", DBUtil.getOracleDerivedNamesForTableAndAttrs(className, attributes, persistenceType.equals("HSQL")));
-
-
-            StringWriter writer = new StringWriter();
-            template.merge(context, writer);
-
-            File file = new File(resourcesPath, "data.sql");
-            try (PrintWriter out = new PrintWriter(file)) {
-                out.println(writer.toString());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            thread.setContextClassLoader(loader);
-        }
-    }
-
-    private void createApplicationProperties(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
-        Thread thread = Thread.currentThread();
-        ClassLoader loader = thread.getContextClassLoader();
-        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
-        String resourcesPath = path + "/src/main/resources/";
-        try {
-            FileUtil.ensureExists(new File(resourcesPath));
-            VelocityEngine velocityEngine = new VelocityEngine();
-
-            // Set the resource loader to load resources from the classpath
-            Properties props = new Properties();
-            props.setProperty("resource.loader", "classpath");
-            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
-            velocityEngine.init(props);
-
-            Template template = velocityEngine.getTemplate("templates/spring/application-template.properties");
-
-            VelocityContext context = new VelocityContext();
-            context.put("domainClassName", className);
-            context.put("packageName", packageName);
-            context.put("persistenceType", persistenceType);
-
-            StringWriter writer = new StringWriter();
-            template.merge(context, writer);
-
-            File file = new File(resourcesPath, "application.properties");
             try (PrintWriter out = new PrintWriter(file)) {
                 out.println(writer.toString());
             }
