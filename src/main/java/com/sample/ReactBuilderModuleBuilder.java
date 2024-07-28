@@ -56,6 +56,7 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 createSpringBootStarterClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
                 createJavaClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
                 createRepositoryClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType); // Invoke createRepositoryClass here
+                createServiceClass(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
 
                 // Create the ListWrapper class
                 createCommonClass(srcPath, packageName, "ListWrapper", listOfAttributes, persistenceType, "templates/java/listwrapper-template.java");
@@ -219,6 +220,51 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         }
     }
 
+    private void createServiceClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        Thread thread = Thread.currentThread();
+        ClassLoader loader = thread.getContextClassLoader();
+        thread.setContextClassLoader(ReactBuilderModuleBuilder.class.getClassLoader());
+        String servicePath = path + "/service/";
+        try {
+            FileUtil.ensureExists(new File(servicePath));
+            VelocityEngine velocityEngine = new VelocityEngine();
+
+            // Set the resource loader to load resources from the classpath
+            Properties props = new Properties();
+            props.setProperty("resource.loader", "classpath");
+            props.setProperty("classpath.resource.loader.class", ClasspathResourceLoader.class.getName());
+            velocityEngine.init(props);
+
+            Template template = velocityEngine.getTemplate("templates/java/service-template.java");
+
+            VelocityContext context = new VelocityContext();
+            context.put("domainClassName", className);
+            context.put("packageName", packageName);
+
+            ArrayList<Map<String, String>> attributes = new ArrayList<>();
+            for (Vector<Object> row : data) {
+                Map<String, String> attribute = new HashMap<>();
+                attribute.put("name", (String) row.get(0));
+                attribute.put("dataType", (String) row.get(1));
+                attributes.add(attribute);
+            }
+            context.put("attributes", attributes);
+            context.put("domainClassIdAttributeName", getIdAttributeName(data));
+
+            StringWriter writer = new StringWriter();
+            template.merge(context, writer);
+
+            File file = new File(servicePath, className + "Service.java");
+            try (PrintWriter out = new PrintWriter(file)) {
+                out.println(writer.toString());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            thread.setContextClassLoader(loader);
+        }
+    }
+
     private void createCommonClass(String path, String packageName, String className, Vector<Vector> data, String persistenceType,
                                    String templateName) {
         Thread thread = Thread.currentThread();
@@ -273,6 +319,16 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         }
     }
 
+    private String getIdAttributeName(Vector<Vector> attributes) {
+        for (Vector<Object> attribute : attributes) {
+            Boolean isId = (Boolean) attribute.get(2);
+            if (isId) {
+                return (String) attribute.get(0);
+            }
+        }
+        return null;
+    }
+
     @Override
     public ModuleType<?> getModuleType() {
         return ReactBuilderModuleType.getInstance();
@@ -285,6 +341,8 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
             modifiableRootModel.addContentEntry(root);
         }
     }
+
+
 
     @Override
     public ModuleWizardStep getCustomOptionsStep(WizardContext context, Disposable parentDisposable) {
