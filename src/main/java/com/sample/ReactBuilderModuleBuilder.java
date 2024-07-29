@@ -339,7 +339,10 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
 
                 // Add Row button
                 JButton addRowButton = new JButton("Add Row");
-                addRowButton.addActionListener(e -> tableModel.addRow(new Object[]{"", "String", false, "Text"}));
+                addRowButton.addActionListener(e -> {
+                    boolean isId = tableModel.getRowCount() == 0; // isId is true if it's the first row
+                    tableModel.addRow(new Object[]{"", "String", isId, "Text"});
+                });
                 panel.add(addRowButton, gbc);
 
                 // Delete Row button
