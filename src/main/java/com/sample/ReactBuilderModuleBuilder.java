@@ -66,6 +66,13 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
                 createCommonClass(srcPath, packageName, "SortedIndicator", listOfAttributes, persistenceType, "templates/java/sortedIndicator-template.java");
                 createCommonClass(srcPath, packageName, "NameValuePair", listOfAttributes, persistenceType, "templates/java/namevalue-template.java");
 
+                //Spring Security Config
+                createSpringSecurityConfig(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
+                createClearSessionOnSMHeaderChange(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
+                createCustomLogoutSuccessHandler(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
+                createSecurityUserDetails(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
+                createSpringAuthenticationProvider(srcPath, packageName, domainClassName, listOfAttributes, persistenceType);
+
                 createSchemaSQL(path, packageName, domainClassName, listOfAttributes, persistenceType);
                 createDataSQL(path, packageName, domainClassName, listOfAttributes, persistenceType);
 
@@ -158,7 +165,30 @@ public class ReactBuilderModuleBuilder extends ModuleBuilder {
         createFileFromTemplate(path + "/src/main/resources/", packageName, className, data, persistenceType, "templates/spring/application-template.properties", "application.properties");
     }
 
+    private void createSpringSecurityConfig(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/security/", packageName, className, data, persistenceType,
+                "templates/java/security/spring-security-config-template.java", "SpringSecurityConfig.java");
+    }
 
+    private void createClearSessionOnSMHeaderChange(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/security/", packageName, className, data, persistenceType,
+                "templates/java/security/clear-session-on-sm-header-change-template.java", "ClearSessionOnSMHeaderChange.java");
+    }
+
+    private void createCustomLogoutSuccessHandler(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/security/", packageName, className, data, persistenceType,
+                "templates/java/security/custom-logout-success-handler-template.java", "CustomLogoutSuccessHandler.java");
+    }
+
+    private void createSecurityUserDetails(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/security/", packageName, className, data, persistenceType,
+                "templates/java/security/security-userdetails-template.java", "SampleUserDetails.java");
+    }
+
+    private void createSpringAuthenticationProvider(String path, String packageName, String className, Vector<Vector> data, String persistenceType) {
+        createFileFromTemplate(path + "/security/", packageName, className, data, persistenceType,
+                "templates/java/security/spring-authentication-provider-template.java", "SpringAuthenticationProvider.java");
+    }
 
     private void createGradleBuildFile(String path, String projectName) {
         Thread thread = Thread.currentThread();
